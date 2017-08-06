@@ -1,14 +1,7 @@
+# VST makefile
 # Based on: http://hiltmon.com/blog/2013/07/03/a-simple-c-plus-plus-project-structure/
-#VST2 = ./vst2sdk/public.sdk/source/vst2.x/
-#armadillo = ../libs/armadillo/
-#main = tbrowse
-
-#vstmake:
-#	g++ -O2 -shared -o $(main).dll $(main).cpp $(VST2)audioeffect.cpp $(VST2)audioeffectx.cpp $(VST2)vstplugmain.cpp -I include -I $(VST2) -I vst2sdk -I $(armadillo)include -DARMA_DONT_USE_WRAPPER
-
 vstname = tbrowse
 VST2 = vst2sdk/public.sdk/source/vst2.x
-#armadillo = lib/armadillo
 CC := g++ # This is the main compiler
 
 SRCDIR := src
