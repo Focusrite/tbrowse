@@ -1,16 +1,26 @@
 #pragma once
 #include "portsf.h"
+#include <vector>
 
-class audio {
+class Audio {
 private:
-  PSF_PROPS info;
-  
+  int fd;
+  int samplerate;
+  int channels;
+  psf_stype bitDepth;
+  float seconds = -1.0;
+  float* buf = 0;
+  unsigned int bufferLength = 0;
+  int numSamples;
 
 public:
-  float* getData();
+  static int init();
+  static int finalize();
   int getSamplerate();
   int getChannels();
   psf_stype getBitdepth();
-  
-  audio(const char *path);
-}
+  std::vector<float> getData(int start, int end, bool monoize = true);
+
+  Audio(const char *path, bool monoize=true, float maxSeconds = -1.0);
+  ~Audio();
+};

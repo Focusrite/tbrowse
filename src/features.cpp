@@ -6,9 +6,9 @@ void Sound::calcMFCCFromWav(std::string path) {
 }
 
 Sound::Sound() {
-
+  
 }
 
 Sound::~Sound() {
-  
+
 }
