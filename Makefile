@@ -8,7 +8,7 @@
 
 vstname = tbrowse
 VST2 = vst2sdk/public.sdk/source/vst2.x
-armadillo = lib/armadillo
+#armadillo = lib/armadillo
 CC := g++ # This is the main compiler
 
 SRCDIR := src
@@ -23,9 +23,8 @@ EXTRAOBJECTS := $(patsubst $(VST2)/%,$(BUILDDIRVST)/%,$(EXTRASOURCES:.$(SRCEXT)=
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o)) $(EXTRAOBJECTS)
 CFLAGS := -O2 -Wall
 LFLAGS := -shared
-LIB := -lblas -llapack -Llib -lportsf
-# TODO: Remake with actually installed libraries instead of this mess below..
-INC := -I include -I $(VST2) -I vst2sdk -I $(armadillo)/include -DARMA_DONT_USE_WRAPPER
+LIB := -lblas -llapack -larmadillo -Llib -lportsf
+INC := -I include -I $(VST2) -I vst2sdk
 
 # Linking
 $(TARGET): $(OBJECTS)

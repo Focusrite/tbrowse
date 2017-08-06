@@ -8,7 +8,9 @@ private:
 
 public:
   float* getData();
-  int getFs();
+  int getSamplerate();
   int getChannels();
-  audio();
+  psf_stype getBitdepth();
+  
+  audio(const char *path);
 }

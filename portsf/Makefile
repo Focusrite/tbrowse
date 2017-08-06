@@ -3,7 +3,7 @@ POBJS = ieee80.o portsf.o
 
 # CFLAGS = -I ../include -D_DEBUG -g
 # on strange 64 bit platforms must define CPLONG64
-CFLAGS = -Dunix -O2 -I ../include
+CFLAGS = -Dunix -O2 -I ../include/portsf
 
 CC=gcc
 
@@ -29,4 +29,4 @@ install:	libportsf.a
 #
 #	dependencies
 #
-portsf.c:	../include/portsf.h ieee80.h
+portsf.c:	../include/portsf/portsf.h ieee80.h
