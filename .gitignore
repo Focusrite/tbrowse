@@ -2,3 +2,4 @@
 ./vst2sdk/*
 ./lib/armadillo
 *.o
+*.a
