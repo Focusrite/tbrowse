@@ -13,22 +13,24 @@ SRCEXT := cpp
 SOURCES := $(shell find $(SRCDIR) -type f -name "*.$(SRCEXT)")
 EXTRASOURCES := $(shell find $(VST2) -type f -name "*.$(SRCEXT)")
 EXTRAOBJECTS := $(patsubst $(VST2)/%,$(BUILDDIRVST)/%,$(EXTRASOURCES:.$(SRCEXT)=.o))
-OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o)) $(EXTRAOBJECTS)
+BASEOBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
+TSTOBJECTS := $(filter-out build/tbrowse.o,$(BASEOBJECTS)) # Ugly..
+OBJECTS := $(BASEOBJECTS) $(EXTRAOBJECTS)
 CFLAGS := -O2 -Wall
 LFLAGS := -shared
 LIB := -lblas -llapack -larmadillo -Llib -lportsf
 INC := -I include -I $(VST2) -I vst2sdk
+INCTST := -I include
 
 # Linking
 $(TARGET): $(OBJECTS)
 	@echo " Linking..."
 	@echo " $(CC) $(LFLAGS) $^ -o $(TARGET) $(LIB)"; $(CC) $(LFLAGS) $^ -o $(TARGET) $(LIB)
 
-
 # VST building
 $(BUILDDIRVST)/%.o: $(VST2)/%.$(SRCEXT)
 	@mkdir -p $(BUILDDIRVST)
-	@echo " $(CC) $(CFLAGS) $(INC) -c -o $@ $<"; $(CC) $(CFLAGS) $(INC) -c -o $@ $<
+	@echo " $(CC) $(LFLAGS) $(INC) -c -o $@ $<"; $(CC) $(LFLAGS) $(INC) -c -o $@ $< #CFLAGS
 
 # Main building
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
@@ -41,4 +43,9 @@ clean:
 	@echo " Cleaning...";
 	@echo " $(RM) -r $(BUILDDIR) $(TARGET)"; $(RM) -r $(BUILDDIR) $(TARGET)
 
-.PHONY: all clean print-%
+# Tests
+test: $(BASEOBJECTS)
+	$(CC) $(CFLAGS) test/test.cpp $(TSTOBJECTS) $(INCTST) $(LIB) -o bin/test
+	@echo "Running test.. "; bin/test
+
+.PHONY: all clean print-% test

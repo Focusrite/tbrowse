@@ -39,7 +39,7 @@ namespace sigp {
     return filterbanks;
   }
 
-  arma::fvec mfcc(std::vector<float> input, unsigned int numCoeff, arma::fmat* filterbank,
+  arma::fvec mfcc(arma::fvec* input, unsigned int numCoeff, arma::fmat* filterbank,
     unsigned int NFFT, arma::fvec* window) {
     arma::fmat Pxx = periodogram(input, NFFT, window);
     arma::fvec mfc = arma::zeros<arma::fvec>(numCoeff);
@@ -68,15 +68,15 @@ namespace sigp {
     return X;
   }
 
-  arma::fvec periodogram(std::vector<float> input, unsigned int NFFT, arma::fvec* window) {
-    arma::fvec X = arma::fvec(input);
+  arma::fvec periodogram(arma::fvec* input, unsigned int NFFT, arma::fvec* window) {
+    arma::fvec X = arma::fvec(*input);
     if(window != 0) {
       X = X % *window;
     }
     arma::cx_fvec Y = arma::fft(X, NFFT); // TODO: Beware of where "0Hz" is, 0 or NFFT/2
     Y = Y.head(NFFT/2 + 1); // Since it's just the mirror, simpler to just loose some amplitude
     X = arma::abs(Y);
-    X = (1.0 / input.size()) * (X % X); // Elementwise multiplication, ie. square
+    X = (1.0 / X.n_elem) * (X % X); // Elementwise multiplication, ie. square
     return X;
   }
 

@@ -1,6 +1,8 @@
 #pragma once
-#include "portsf.h"
 #include <vector>
+
+#include "armadillo"
+#include "portsf/portsf.h"
 
 class Audio {
 private:
@@ -8,9 +10,9 @@ private:
   int samplerate;
   int channels;
   psf_stype bitDepth;
-  float seconds = -1.0;
-  float* buf = 0;
-  unsigned int bufferLength = 0;
+  float seconds;
+  float* buf;
+  unsigned int bufferLength;
   int numSamples;
 
 public:
@@ -19,8 +21,8 @@ public:
   int getSamplerate();
   int getChannels();
   psf_stype getBitdepth();
-  std::vector<float> getData(int start, int end, bool monoize = true);
+  arma::fvec getData(int start, int end, bool monoize = true);
 
-  Audio(const char *path, bool monoize=true, float maxSeconds = -1.0);
+  Audio(const char *path, float maxSeconds = -1.0);
   ~Audio();
 };

@@ -1,8 +1,10 @@
-#include "audioread.h"
-#include "portsf.h"
 #include <vector>
-#include <math>
-#include <stdlib>
+#include <algorithm>
+#include <stdlib.h>
+
+#include "audioread.h"
+#include "portsf/portsf.h"
+#include "armadillo"
 
 int Audio::getSamplerate() {
   return this->samplerate;
@@ -14,38 +16,38 @@ psf_stype Audio::getBitdepth() {
   return this->bitDepth;
 }
 
-std::vector<float> Audio::getData(int start, int end, bool monoize = true) {
+arma::fvec Audio::getData(int start, int end, bool monoize) {
   //Error check, not loaded so return empty vector.
   if(this->bufferLength <= 0 || this->buf == 0)
     return std::vector<float>();
 
-  unsigned int last = min(end, this->numSamples));
-  unsigned int first = min(start, last);
-  unsigned int length = last - first;
+  int last = std::max(std::min(end, this->numSamples), 0);
+  int first = std::max(std::min(start, last), 0);
+  int length = last - first;
 
-  //TODO: Special handling needed in case of stereo, but omitted for now
   if(monoize) { // We want to monoize
-    std::vector<float> res(length, 0.0);
+    arma::fvec res = arma::zeros<arma::fvec>(length);
     int index;
     for(int i = 0; i < length * this->channels; i++) {
       index = i / this->channels;
       if(i % this->channels <= 1) // Sum channels, omit channels over stereo
         res[index] += (this->channels > 1) ? buf[first + i] / 2.0 : buf[first + i];
     }
+    return res;
   }
   else {
-    std::vector<float> res(buf[first], buf[first] + length);
+    return arma::fvec(buf[first], length * this->channels);
   }
 }
 
-static int Audio::init() {
+int Audio::init() {
   return psf_init();
 }
-static int Audio::finalize() {
+int Audio::finalize() {
   return psf_finish();
 }
 
-Audio::Audio(const char *path, float maxSeconds = -1.0) {
+Audio::Audio(const char *path, float maxSeconds) {
   // TODO Add a lot of error handling
   psf_props properties;
   this->fd = psf_sndOpen(path, &properties, 0);
@@ -59,11 +61,14 @@ Audio::Audio(const char *path, float maxSeconds = -1.0) {
   this->seconds = maxSeconds;
   int numSamples = psf_sndSize(this->fd);
   if(this->seconds > 0)
-    numSamples = min((int) (this->seconds * this->samplerate), numSamples);
+    numSamples = std::min((int) (this->seconds * this->samplerate), numSamples);
   this->numSamples = numSamples;
   this->bufferLength = channels * numSamples;
-  this->buf = malloc(sizeof(float) * bufferLength);
+  this->buf = (float*)malloc(sizeof(float) * bufferLength);
   int status = psf_sndReadFloatFrames(this->fd, this->buf, numSamples);
+  if(status) {
+    //Do something if error
+  }
 
   psf_sndClose(this->fd);
 }

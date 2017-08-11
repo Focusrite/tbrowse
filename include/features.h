@@ -1,7 +1,7 @@
 #pragma once
+#include <string>
 
 #include "armadillo"
-#include <string.h>
 
 class Sound {
 private:
