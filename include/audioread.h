@@ -12,7 +12,7 @@ private:
   psf_stype bitDepth;
   float seconds;
   float* buf;
-  unsigned int bufferLength;
+  int bufferLength;
   int numSamples;
 
 public:

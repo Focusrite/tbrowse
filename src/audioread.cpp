@@ -1,10 +1,13 @@
 #include <vector>
 #include <algorithm>
 #include <stdlib.h>
+#include <stdio.h>
 
-#include "audioread.h"
 #include "portsf/portsf.h"
 #include "armadillo"
+
+#include "audioread.h"
+#include "log.h"
 
 int Audio::getSamplerate() {
   return this->samplerate;
@@ -19,7 +22,7 @@ psf_stype Audio::getBitdepth() {
 arma::fvec Audio::getData(int start, int end, bool monoize) {
   //Error check, not loaded so return empty vector.
   if(this->bufferLength <= 0 || this->buf == 0)
-    return std::vector<float>();
+    return arma::zeros<arma::fvec>(0);
 
   int last = std::max(std::min(end, this->numSamples), 0);
   int first = std::max(std::min(start, last), 0);
@@ -31,7 +34,7 @@ arma::fvec Audio::getData(int start, int end, bool monoize) {
     for(int i = 0; i < length * this->channels; i++) {
       index = i / this->channels;
       if(i % this->channels <= 1) // Sum channels, omit channels over stereo
-        res[index] += (this->channels > 1) ? buf[first + i] / 2.0 : buf[first + i];
+        res[index] += (this->channels > 1) ? this->buf[first + i] / 2.0 : this->buf[first + i];
     }
     return res;
   }
@@ -51,9 +54,9 @@ Audio::Audio(const char *path, float maxSeconds) {
   // TODO Add a lot of error handling
   psf_props properties;
   this->fd = psf_sndOpen(path, &properties, 0);
-  if(this->fd < 0) {
-    // Do error, we couldn't open it for some reason.
-  }
+  if(this->fd < 0)
+    logErr("Error opening file.", this->fd);
+
   this->samplerate = properties.srate;
   this->channels = properties.chans;
   this->bitDepth = properties.samptype;
@@ -66,11 +69,12 @@ Audio::Audio(const char *path, float maxSeconds) {
   this->bufferLength = channels * numSamples;
   this->buf = (float*)malloc(sizeof(float) * bufferLength);
   int status = psf_sndReadFloatFrames(this->fd, this->buf, numSamples);
-  if(status) {
-    //Do something if error
-  }
+  if(status < 0)
+    logErr("Error reading file.", status);
 
-  psf_sndClose(this->fd);
+  status = psf_sndClose(this->fd);
+  if(status < 0)
+    logErr("Error closing file.", status);
 }
 Audio::~Audio() {
   if(this->buf != 0)

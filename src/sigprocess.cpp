@@ -5,6 +5,7 @@
 
 #include "armadillo"
 #include "sigprocess.h"
+#include "log.h"
 
 
 namespace sigp {
@@ -13,27 +14,32 @@ namespace sigp {
   }
 
   arma::fvec invmelscale(arma::fvec mel) {
-    return 700 * arma::exp(mel/1125 - 1);
+    return 700 * (arma::exp(mel/1125) - 1);
   }
 
-  arma::fmat melfilterbank(unsigned int length, unsigned int numFilters, float minHz, float maxHz,
-    unsigned int fs, unsigned int NFFT) {
-    arma::fvec lower = melscale(arma::fvec(minHz));
-    arma::fvec upper = melscale(arma::fvec(maxHz));
+  arma::fmat melfilterbank(int length, int numFilters, float minHz, float maxHz,
+    int fs, int NFFT) {
+    arma::fvec lower = arma::fvec(1); lower.fill(minHz);
+    arma::fvec upper =  arma::fvec(1); upper.fill(maxHz);
+    lower = melscale(lower);
+    upper = melscale(upper);
+
     arma::fvec midpts = arma::linspace<arma::fvec>(lower(0), upper(0), numFilters + 2);
     midpts = invmelscale(midpts);
     //Truncate to right FFT bin
-    arma::vec fftpts = arma::conv_to<arma::vec>::from(arma::floor(((NFFT + 1) / fs) * midpts));
+    arma::ivec fftpts = arma::conv_to<arma::ivec>::from((((float)(NFFT + 1) / fs) * midpts));
 
     // Do calculation of the actual filterbanks, one (frequency domain) filter per row.
-    arma::fmat filterbanks = arma::zeros<arma::fmat>(numFilters, NFFT);
-    for(unsigned int i = 0; i < numFilters; i++) {
+    arma::fmat filterbanks = arma::zeros<arma::fmat>(numFilters, NFFT/2 + 1);
+    for(int i = 0; i < numFilters; i++) {
       unsigned int startIndex = fftpts(i);
       unsigned int midIndex = fftpts(i + 1);
       unsigned int endIndex = fftpts(i + 2);
-      filterbanks.submat(i, startIndex, i, midIndex) = arma::linspace<arma::frowvec>(0.0, 1.0, midIndex - startIndex);
+      // TODO: Error with calculation here, not correct values or min/max.. not done like this
+      filterbanks.submat(i, startIndex, i, midIndex) = arma::linspace<arma::frowvec>(0.0, 1.0, midIndex - startIndex + 1);;
       float nextLastValue = filterbanks(i, midIndex - 1);
-      filterbanks.submat(i, midIndex + 1, i, endIndex) = arma::linspace<arma::frowvec>(nextLastValue, 0.0, endIndex - (midIndex + 1));
+      filterbanks.submat(i, midIndex + 1, i, endIndex) = arma::linspace<arma::frowvec>(nextLastValue, 0.0, endIndex - midIndex);
+      filterbanks.submat(i, startIndex, i, endIndex).print();
     }
 
     return filterbanks;
@@ -41,11 +47,14 @@ namespace sigp {
 
   arma::fvec mfcc(arma::fvec* input, unsigned int numCoeff, arma::fmat* filterbank,
     unsigned int NFFT, arma::fvec* window) {
+    logInf("Calc periodogram");
     arma::fmat Pxx = periodogram(input, NFFT, window);
     arma::fvec mfc = arma::zeros<arma::fvec>(numCoeff);
+    logInf("Multiply with filterbank");
     for(unsigned int i = 0; i < numCoeff; i++) {
-      mfc(i) = log(arma::accu(filterbank->col(i) % Pxx));
+      mfc(i) = log(arma::accu(filterbank->row(i).t() % Pxx));
     }
+    logInf("Performing DCT");
     return dct(&mfc);
   }
 

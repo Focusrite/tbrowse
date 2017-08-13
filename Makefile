@@ -45,7 +45,7 @@ clean:
 
 # Tests
 test: $(BASEOBJECTS)
-	$(CC) $(CFLAGS) test/test.cpp $(TSTOBJECTS) $(INCTST) $(LIB) -o bin/test
+	$(CC) $(CFLAGS) -g test/test.cpp $(TSTOBJECTS) $(INCTST) $(LIB) -o bin/test
 	@echo "Running test.. "; bin/test
 
 .PHONY: all clean print-% test
