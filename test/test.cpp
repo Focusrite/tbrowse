@@ -1,9 +1,14 @@
 #include <iostream>
+#include <cmath>
+#include <string>
 
 #include "armadillo"
+
 #include "audioread.h"
 #include "sigprocess.h"
+#include "feature.h"
 #include "log.h"
+#include "settings.h"
 
 #define IN_TEST TRUE
 
@@ -14,23 +19,50 @@ void passedText(bool passed) {
     std::cout << "Failed\n";
 }
 
-void testSigp(Audio* a) {
-  logInf("Calc fbank");
-  arma::fmat fbank = sigp::melfilterbank(400, 20, 40, 16000, 44100, 512);
-  logInf("Calc window");
-  arma::fvec window = sigp::hamming(400);
+void testSigp() {
+  float tolerance = 0.01;
+  std::cout << "Test DCT 1 (zero): ";
+  float ans = 0;
+  arma::fvec test = arma::zeros<arma::fvec>(5);
+  arma::fvec res = sigp::dct(&test);
+  passedText(abs(arma::accu(res)) - ans < tolerance);
 
-  arma::fvec d = a->getData(0, 400);
-  logInf("Calc mfcc");
-  arma::fvec mfcc = sigp::mfcc(&d, 20, &fbank, 512, &window);
-  mfcc.print();
+  std::cout << "Test DCT 2 (non-zero): ";
+  ans = 2.7559;
+  test(0) = 1; test(2) = 1; test(4) = 1;
+  res = sigp::dct(&test);
+  passedText(abs(arma::accu(res)) - ans < tolerance);
+
+  std::cout << "Test Hamming: ";
+  ans = 4.94;
+  res = sigp::hamming(10);
+  passedText(abs(arma::accu(res)) - ans < tolerance);
+
+  std::cout << "Test periodogram: ";
+  ans = 1.01;
+  arma::fvec win = sigp::hamming(5);
+  res = sigp::periodogram(&test, 10, &win);
+  passedText(abs(arma::accu(res)) - ans < tolerance);
+}
+
+void testFeatureExtraction() {
+  float tolerance = 0.01;
+  std::cout << "Test empty: ";
+  float ans = 0.0;
+  AudioFeature empty = AudioFeature();
+  empty.extractFromAudio("./test/resources/empty.wav");
+  passedText(arma::accu(arma::abs(empty.getFeature())) - ans < tolerance);
+
+  std::cout << "Test not empty: ";
+  ans = 0.0;
+  AudioFeature notempty = AudioFeature();
+  notempty.extractFromAudio("./test/resources/notempty.wav");
+  std::cout << "Got: " << arma::accu(arma::abs(notempty.getFeature())) << "\n";
+  passedText(arma::accu(arma::abs(notempty.getFeature())) - ans < tolerance);
 }
 
 // Audio tests
 void testAudioread() {
-  int status = Audio::init();
-  if (status != 0)
-    std::cout << "Error intializing\n";
   std::cout << "Testing reading of file empty.wav: ";
   Audio a = Audio("./test/resources/empty.wav");
   arma::fvec data = a.getData(0, 99999);
@@ -41,12 +73,24 @@ void testAudioread() {
   data = b.getData(0, 99999);
   passedText(arma::accu(data % data) != 0);
 
-  testSigp(&b);
-
-  Audio::finalize();
 }
 
 
 int main() {
+  Settings::load();
+  int status = Audio::init();
+  AudioFeature::init(10);
+  if (status != 0)
+    std::cout << "Error intializing\n";
+
+  Settings::load();
+  std::cout << "\nSignal processing:\n";
+  testSigp();
+  std::cout << "\nAudio reading:\n";
   testAudioread();
+  std::cout << "\nAudio processing:\n";
+  testFeatureExtraction();
+  AudioFeature::finalize();
+  Audio::finalize();
+  std::cout << "\n..done.\n";
 }

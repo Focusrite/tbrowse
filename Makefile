@@ -16,8 +16,8 @@ EXTRAOBJECTS := $(patsubst $(VST2)/%,$(BUILDDIRVST)/%,$(EXTRASOURCES:.$(SRCEXT)=
 BASEOBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 TSTOBJECTS := $(filter-out build/tbrowse.o,$(BASEOBJECTS)) # Ugly..
 OBJECTS := $(BASEOBJECTS) $(EXTRAOBJECTS)
-CFLAGS := -O2 -Wall
-LFLAGS := -shared
+CFLAGS := -O2 -Wall -std=c++11
+LFLAGS := -shared -std=c++11
 LIB := -lblas -llapack -larmadillo -Llib -lportsf
 INC := -I include -I $(VST2) -I vst2sdk
 INCTST := -I include

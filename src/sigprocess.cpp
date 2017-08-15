@@ -32,29 +32,33 @@ namespace sigp {
     // Do calculation of the actual filterbanks, one (frequency domain) filter per row.
     arma::fmat filterbanks = arma::zeros<arma::fmat>(numFilters, NFFT/2 + 1);
     for(int i = 0; i < numFilters; i++) {
-      unsigned int startIndex = fftpts(i);
-      unsigned int midIndex = fftpts(i + 1);
-      unsigned int endIndex = fftpts(i + 2);
-      // TODO: Error with calculation here, not correct values or min/max.. not done like this
-      filterbanks.submat(i, startIndex, i, midIndex) = arma::linspace<arma::frowvec>(0.0, 1.0, midIndex - startIndex + 1);;
-      float nextLastValue = filterbanks(i, midIndex - 1);
-      filterbanks.submat(i, midIndex + 1, i, endIndex) = arma::linspace<arma::frowvec>(nextLastValue, 0.0, endIndex - midIndex);
-      filterbanks.submat(i, startIndex, i, endIndex).print();
+      int startIndex = fftpts(i);
+      int midIndex = fftpts(i + 1);
+      int endIndex = fftpts(i + 2);
+      for(int j = startIndex; j < midIndex; j++)
+        filterbanks(i, j) = (float)(j - startIndex) / (midIndex - startIndex);
+      for(int j = midIndex; j <= endIndex; j++)
+        filterbanks(i, j) = (float)(endIndex - j) / (endIndex - midIndex);
+      //filterbanks.submat(i, startIndex, i, endIndex).print();
     }
-
     return filterbanks;
   }
 
-  arma::fvec mfcc(arma::fvec* input, unsigned int numCoeff, arma::fmat* filterbank,
-    unsigned int NFFT, arma::fvec* window) {
-    logInf("Calc periodogram");
+  arma::fvec mfcc(arma::fvec* input, int numCoeff, arma::fmat* filterbank,
+    int NFFT, arma::fvec* window) {
+    // Otherwise perform MFCC calculations
     arma::fmat Pxx = periodogram(input, NFFT, window);
     arma::fvec mfc = arma::zeros<arma::fvec>(numCoeff);
-    logInf("Multiply with filterbank");
-    for(unsigned int i = 0; i < numCoeff; i++) {
+
+    for(int i = 0; i < numCoeff; i++) {
       mfc(i) = log(arma::accu(filterbank->row(i).t() % Pxx));
     }
-    logInf("Performing DCT");
+    // Special case, if have too little data we force the mfcc to 0, we're not confident in anything.
+    if(mfc.has_inf())
+      return arma::zeros<arma::fvec>(numCoeff);
+
+    // NB: As we're currently not removing any coefficients we might be able to settle with MFC and
+    // skip taking the DCT of mfc instead.
     return dct(&mfc);
   }
 
@@ -70,26 +74,26 @@ namespace sigp {
     // Step 2:
     arma::cx_fvec Y = arma::fft(y);
     // Step 3:
-    //Not sure Armadillo can take complex numbers directly..
     arma::fvec exponent = arma::linspace<arma::fvec>(0, N - 1, N);
     exponent *= (arma::datum::pi / 2 * N);
     arma::fvec X = arma::real(exp(std::complex<float>(0.0f,-1.0f) * exponent) % Y);
     return X;
   }
 
-  arma::fvec periodogram(arma::fvec* input, unsigned int NFFT, arma::fvec* window) {
+  arma::fvec periodogram(arma::fvec* input, int NFFT, arma::fvec* window) {
     arma::fvec X = arma::fvec(*input);
     if(window != 0) {
       X = X % *window;
     }
     arma::cx_fvec Y = arma::fft(X, NFFT); // TODO: Beware of where "0Hz" is, 0 or NFFT/2
-    Y = Y.head(NFFT/2 + 1); // Since it's just the mirror, simpler to just loose some amplitude
+    // Since it's just the mirror, simpler to just loose some amplitude, multiply by two would work
+    // for all but DC which isn't very important.
     X = arma::abs(Y);
-    X = (1.0 / X.n_elem) * (X % X); // Elementwise multiplication, ie. square
+    X = (1.0 / X.n_elem) * (X.head(NFFT/2 + 1) % X.head(NFFT/2 + 1));
     return X;
   }
 
-  arma::fvec hamming(unsigned int length) {
+  arma::fvec hamming(int length) {
     // Defined as such for Hamming window
     const float alpha = 0.54;
     const float beta = 1.0 - alpha;

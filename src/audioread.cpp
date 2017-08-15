@@ -27,9 +27,10 @@ arma::fvec Audio::getData(int start, int end, bool monoize) {
   int last = std::max(std::min(end, this->numSamples), 0);
   int first = std::max(std::min(start, last), 0);
   int length = last - first;
+  int resultLength = abs(end - start);
 
   if(monoize) { // We want to monoize
-    arma::fvec res = arma::zeros<arma::fvec>(length);
+    arma::fvec res = arma::zeros<arma::fvec>(resultLength);
     int index;
     for(int i = 0; i < length * this->channels; i++) {
       index = i / this->channels;
@@ -39,6 +40,7 @@ arma::fvec Audio::getData(int start, int end, bool monoize) {
     return res;
   }
   else {
+    //TODO: make this resultLength too even if not that much data, to be consitent with above.
     return arma::fvec(buf[first], length * this->channels);
   }
 }
